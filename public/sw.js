@@ -1,5 +1,5 @@
-const CACHE_NAME = "shared-memory-space-v1";
-const APP_SHELL = ["/", "/dashboard", "/timeline", "/search", "/manifest.webmanifest"];
+const CACHE_NAME = "shared-memory-space-v2";
+const APP_SHELL = ["/", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -20,6 +20,19 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
+
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const cloned = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, cloned));
+          return response;
+        })
+        .catch(() => caches.match(request).then((cached) => cached || caches.match("/")))
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(request).then((cached) => {
