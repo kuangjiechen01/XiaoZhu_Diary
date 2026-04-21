@@ -20,6 +20,14 @@ import type { Anniversary } from "@/lib/types";
 
 type AnniversaryValues = z.infer<typeof anniversarySchema>;
 
+const anniversaryKindLabels: Record<AnniversaryValues["kind"], string> = {
+  relationship_start: "恋爱开始日",
+  birthday: "生日",
+  first_meet: "第一次见面",
+  first_trip: "第一次旅行",
+  custom: ""
+};
+
 export function AnniversaryForm({
   anniversary,
   onDone
@@ -55,6 +63,23 @@ export function AnniversaryForm({
       visibility: anniversary?.visibility ?? "space"
     });
   }, [anniversary, form]);
+
+  const selectedKind = form.watch("kind");
+
+  useEffect(() => {
+    const currentTitle = form.getValues("title").trim();
+    const nextTitle = anniversaryKindLabels[selectedKind];
+    const knownAutoTitles = new Set(
+      Object.values(anniversaryKindLabels).filter(Boolean)
+    );
+
+    if (selectedKind !== "custom" && (!currentTitle || knownAutoTitles.has(currentTitle))) {
+      form.setValue("title", nextTitle, {
+        shouldDirty: currentTitle.length > 0,
+        shouldValidate: true
+      });
+    }
+  }, [form, selectedKind]);
 
   const saveMutation = useMutation({
     mutationFn: (values: AnniversaryValues) =>
@@ -100,14 +125,24 @@ export function AnniversaryForm({
       <form
         className="grid gap-4"
         onSubmit={form.handleSubmit(
-          (values) => saveMutation.mutate(values),
-          () => toast.error("请先补全纪念日信息")
+          (values) =>
+            saveMutation.mutate({
+              ...values,
+              title: values.title.trim() || anniversaryKindLabels[values.kind]
+            }),
+          (errors) => {
+            const firstMessage = Object.values(errors)[0]?.message;
+            toast.error(typeof firstMessage === "string" ? firstMessage : "请先补全纪念日信息");
+          }
         )}
       >
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="anniversary-title">名称</Label>
             <Input id="anniversary-title" {...form.register("title")} />
+            <p className="text-xs text-muted-foreground">
+              选择预设类型后会自动带入默认名称，你也可以手动改成自己的叫法。
+            </p>
             <p className="text-xs text-destructive">
               {form.formState.errors.title?.message}
             </p>
