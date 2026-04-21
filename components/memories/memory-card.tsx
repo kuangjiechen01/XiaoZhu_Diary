@@ -27,7 +27,7 @@ export function MemoryCard({ memory }: { memory: Memory }) {
               ) : null}
             </div>
             <p className="line-clamp-2 text-sm leading-6 text-muted-foreground">
-              {memory.content}
+              {memory.content.trim() || "这条回忆暂时只保留了标题。"}
             </p>
           </div>
           {memory.photos[0] ? (

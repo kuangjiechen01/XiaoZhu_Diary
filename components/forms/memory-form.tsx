@@ -117,8 +117,15 @@ export function MemoryForm({
             </p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="memory-content">正文</Label>
-            <Textarea id="memory-content" {...form.register("content")} />
+            <Label htmlFor="memory-content">正文（可选）</Label>
+            <Textarea
+              id="memory-content"
+              placeholder="这部分可以先留空，后面想补的时候再回来写。"
+              {...form.register("content")}
+            />
+            <p className="text-xs text-muted-foreground">
+              想快速记下一件事时，只写标题也可以。
+            </p>
             <p className="text-xs text-destructive">
               {form.formState.errors.content?.message}
             </p>

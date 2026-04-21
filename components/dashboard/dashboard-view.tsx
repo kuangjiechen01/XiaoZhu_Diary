@@ -384,7 +384,7 @@ export function DashboardView() {
                     {memory.isStarred ? <Badge variant="accent">重要</Badge> : null}
                   </div>
                   <p className="line-clamp-3 text-sm leading-6 text-muted-foreground">
-                    {memory.content}
+                    {memory.content.trim() || "这条回忆暂时只保留了标题。"}
                   </p>
                 </div>
               </Link>

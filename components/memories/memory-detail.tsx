@@ -95,7 +95,7 @@ export function MemoryDetail({ memory }: { memory: Memory }) {
         </div>
 
         <CardDescription className="whitespace-pre-wrap text-base leading-8 text-foreground">
-          {memory.content}
+          {memory.content.trim() || "这条回忆暂时只保留了标题，正文还没补上。"}
         </CardDescription>
       </Card>
 

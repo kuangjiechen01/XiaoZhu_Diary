@@ -23,7 +23,7 @@ export const joinSpaceSchema = z.object({
 
 export const memorySchema = z.object({
   title: z.string().min(1, "请输入标题").max(60, "标题最多 60 个字"),
-  content: z.string().min(1, "请写下这段回忆").max(5000, "内容过长"),
+  content: z.string().max(5000, "内容过长"),
   date: z.string().min(1, "请选择日期"),
   time: z.string().optional().or(z.literal("")),
   location: z.string().max(80, "地点最多 80 个字").optional().or(z.literal("")),
