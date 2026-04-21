@@ -4,6 +4,7 @@ import type {
   CoupleSpace,
   Invitation,
   Memory,
+  MemoryComment,
   NoteCard,
   SpaceMember,
   UserProfile,
@@ -26,6 +27,7 @@ export interface DemoDatabase {
   members: SpaceMember[];
   invitations: Invitation[];
   memories: Memory[];
+  memoryComments: MemoryComment[];
   anniversaries: Anniversary[];
   notes: NoteCard[];
   wishes: WishlistItem[];
@@ -150,6 +152,24 @@ export const initialDemoDatabase: DemoDatabase = {
       updatedBy: "user_xiaozhu",
       createdAt: now,
       updatedAt: now
+    }
+  ],
+  memoryComments: [
+    {
+      id: "comment_1",
+      memoryId: "memory_1",
+      spaceId: "space_home",
+      content: "那天风真的很大，但和你站在一起就觉得很安心。",
+      createdBy: "user_xiaozhu",
+      createdAt: now
+    },
+    {
+      id: "comment_2",
+      memoryId: "memory_1",
+      spaceId: "space_home",
+      content: "下次还想再去一次，换个季节看看海边。",
+      createdBy: "user_me",
+      createdAt: now
     }
   ],
   anniversaries: [

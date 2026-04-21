@@ -42,7 +42,7 @@ create table if not exists public.profiles (
 create table if not exists public.space_members (
   id uuid primary key default gen_random_uuid(),
   space_id uuid not null references public.couple_spaces(id) on delete cascade,
-  user_id uuid not null references auth.users(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
   role text not null check (role in ('owner', 'partner')),
   joined_at timestamptz not null default timezone('utc', now()),
   unique (space_id, user_id),
@@ -73,8 +73,8 @@ create table if not exists public.memories (
   mood_tags text[] not null default '{}',
   is_starred boolean not null default false,
   visibility text not null default 'space' check (visibility in ('space', 'private')),
-  created_by uuid not null references auth.users(id) on delete cascade,
-  updated_by uuid not null references auth.users(id) on delete cascade,
+  created_by uuid not null references public.profiles(id) on delete cascade,
+  updated_by uuid not null references public.profiles(id) on delete cascade,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
   search_vector tsvector generated always as (
@@ -95,6 +95,15 @@ create table if not exists public.memory_photos (
   created_at timestamptz not null default timezone('utc', now())
 );
 
+create table if not exists public.memory_comments (
+  id uuid primary key default gen_random_uuid(),
+  memory_id uuid not null references public.memories(id) on delete cascade,
+  space_id uuid not null references public.couple_spaces(id) on delete cascade,
+  content text not null,
+  created_by uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz not null default timezone('utc', now())
+);
+
 create table if not exists public.anniversaries (
   id uuid primary key default gen_random_uuid(),
   space_id uuid not null references public.couple_spaces(id) on delete cascade,
@@ -105,8 +114,8 @@ create table if not exists public.anniversaries (
   sort_order integer not null default 0,
   reminder_enabled boolean not null default true,
   visibility text not null default 'space' check (visibility in ('space', 'private')),
-  created_by uuid not null references auth.users(id) on delete cascade,
-  updated_by uuid not null references auth.users(id) on delete cascade,
+  created_by uuid not null references public.profiles(id) on delete cascade,
+  updated_by uuid not null references public.profiles(id) on delete cascade,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
@@ -118,7 +127,7 @@ create table if not exists public.notes (
   visibility text not null default 'space' check (visibility in ('space', 'private')),
   is_pinned boolean not null default false,
   hide_from_homepage boolean not null default false,
-  created_by uuid not null references auth.users(id) on delete cascade,
+  created_by uuid not null references public.profiles(id) on delete cascade,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
@@ -132,8 +141,8 @@ create table if not exists public.wishlists (
   target_date date,
   status text not null default 'pending' check (status in ('pending', 'completed')),
   visibility text not null default 'space' check (visibility in ('space', 'private')),
-  created_by uuid not null references auth.users(id) on delete cascade,
-  updated_by uuid not null references auth.users(id) on delete cascade,
+  created_by uuid not null references public.profiles(id) on delete cascade,
+  updated_by uuid not null references public.profiles(id) on delete cascade,
   completed_at timestamptz,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
@@ -142,7 +151,7 @@ create table if not exists public.wishlists (
 create table if not exists public.activity_logs (
   id uuid primary key default gen_random_uuid(),
   space_id uuid not null references public.couple_spaces(id) on delete cascade,
-  actor_id uuid not null references auth.users(id) on delete cascade,
+  actor_id uuid not null references public.profiles(id) on delete cascade,
   entity_type text not null check (entity_type in ('memory', 'anniversary', 'note', 'wishlist', 'space', 'invite')),
   entity_id uuid,
   action_type text not null check (action_type in ('created', 'updated', 'deleted', 'completed', 'joined', 'left', 'accepted')),
@@ -151,9 +160,59 @@ create table if not exists public.activity_logs (
   created_at timestamptz not null default timezone('utc', now())
 );
 
+alter table public.space_members
+  drop constraint if exists space_members_user_id_fkey,
+  drop constraint if exists space_members_user_id_profiles_fkey,
+  add constraint space_members_user_id_fkey
+  foreign key (user_id) references public.profiles(id) on delete cascade;
+
+alter table public.memories
+  drop constraint if exists memories_created_by_fkey,
+  drop constraint if exists memories_created_by_profiles_fkey,
+  add constraint memories_created_by_fkey
+  foreign key (created_by) references public.profiles(id) on delete cascade,
+  drop constraint if exists memories_updated_by_fkey,
+  drop constraint if exists memories_updated_by_profiles_fkey,
+  add constraint memories_updated_by_fkey
+  foreign key (updated_by) references public.profiles(id) on delete cascade;
+
+alter table public.anniversaries
+  drop constraint if exists anniversaries_created_by_fkey,
+  drop constraint if exists anniversaries_created_by_profiles_fkey,
+  add constraint anniversaries_created_by_fkey
+  foreign key (created_by) references public.profiles(id) on delete cascade,
+  drop constraint if exists anniversaries_updated_by_fkey,
+  drop constraint if exists anniversaries_updated_by_profiles_fkey,
+  add constraint anniversaries_updated_by_fkey
+  foreign key (updated_by) references public.profiles(id) on delete cascade;
+
+alter table public.notes
+  drop constraint if exists notes_created_by_fkey,
+  drop constraint if exists notes_created_by_profiles_fkey,
+  add constraint notes_created_by_fkey
+  foreign key (created_by) references public.profiles(id) on delete cascade;
+
+alter table public.wishlists
+  drop constraint if exists wishlists_created_by_fkey,
+  drop constraint if exists wishlists_created_by_profiles_fkey,
+  add constraint wishlists_created_by_fkey
+  foreign key (created_by) references public.profiles(id) on delete cascade,
+  drop constraint if exists wishlists_updated_by_fkey,
+  drop constraint if exists wishlists_updated_by_profiles_fkey,
+  add constraint wishlists_updated_by_fkey
+  foreign key (updated_by) references public.profiles(id) on delete cascade;
+
+alter table public.activity_logs
+  drop constraint if exists activity_logs_actor_id_fkey,
+  drop constraint if exists activity_logs_actor_id_profiles_fkey,
+  add constraint activity_logs_actor_id_fkey
+  foreign key (actor_id) references public.profiles(id) on delete cascade;
+
 create index if not exists idx_space_members_space on public.space_members(space_id);
 create index if not exists idx_memories_space_date on public.memories(space_id, date desc, created_at desc);
 create index if not exists idx_memories_search on public.memories using gin(search_vector);
+create index if not exists idx_memory_comments_memory on public.memory_comments(memory_id, created_at);
+create index if not exists idx_memory_comments_space on public.memory_comments(space_id, created_at);
 create index if not exists idx_anniversaries_space on public.anniversaries(space_id, sort_order, date);
 create index if not exists idx_notes_space on public.notes(space_id, created_at desc);
 create index if not exists idx_wishlists_space on public.wishlists(space_id, updated_at desc);
@@ -357,8 +416,8 @@ begin
 
   select count(*)
   into member_count
-  from public.space_members
-  where space_id = invite_record.space_id;
+  from public.space_members sm
+  where sm.space_id = invite_record.space_id;
 
   if member_count >= 2 then
     raise exception 'Space already full';
@@ -521,6 +580,7 @@ alter table public.space_members enable row level security;
 alter table public.invitations enable row level security;
 alter table public.memories enable row level security;
 alter table public.memory_photos enable row level security;
+alter table public.memory_comments enable row level security;
 alter table public.anniversaries enable row level security;
 alter table public.notes enable row level security;
 alter table public.wishlists enable row level security;
@@ -628,6 +688,47 @@ with check (
   exists (
     select 1 from public.memories m
     where m.id = memory_id
+      and public.is_space_member(m.space_id)
+      and (m.visibility = 'space' or m.created_by = auth.uid())
+  )
+);
+
+create policy "members can view memory comments"
+on public.memory_comments for select
+to authenticated
+using (
+  exists (
+    select 1 from public.memories m
+    where m.id = memory_id
+      and m.space_id = memory_comments.space_id
+      and public.is_space_member(m.space_id)
+      and (m.visibility = 'space' or m.created_by = auth.uid())
+  )
+);
+
+create policy "members can create memory comments"
+on public.memory_comments for insert
+to authenticated
+with check (
+  created_by = auth.uid()
+  and exists (
+    select 1 from public.memories m
+    where m.id = memory_id
+      and m.space_id = memory_comments.space_id
+      and public.is_space_member(m.space_id)
+      and (m.visibility = 'space' or m.created_by = auth.uid())
+  )
+);
+
+create policy "authors can delete their memory comments"
+on public.memory_comments for delete
+to authenticated
+using (
+  created_by = auth.uid()
+  and exists (
+    select 1 from public.memories m
+    where m.id = memory_id
+      and m.space_id = memory_comments.space_id
       and public.is_space_member(m.space_id)
       and (m.visibility = 'space' or m.created_by = auth.uid())
   )

@@ -4,6 +4,7 @@ import type {
   CoupleSpace,
   Invitation,
   Memory,
+  MemoryComment,
   MemoryPhoto,
   NoteCard,
   SpaceMember,
@@ -114,6 +115,18 @@ export function mapMemoryRow(row: any, photoUrls?: Record<string, string>): Memo
     updatedByProfile: row.updated_by_profile
       ? mapProfileRow(row.updated_by_profile)
       : undefined
+  };
+}
+
+export function mapMemoryCommentRow(row: any): MemoryComment {
+  return {
+    id: row.id,
+    memoryId: row.memory_id,
+    spaceId: row.space_id,
+    content: row.content,
+    createdBy: row.created_by,
+    createdAt: row.created_at,
+    authorProfile: row.author_profile ? mapProfileRow(row.author_profile) : undefined
   };
 }
 

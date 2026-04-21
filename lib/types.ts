@@ -143,6 +143,16 @@ export interface Memory {
   updatedByProfile?: UserProfile;
 }
 
+export interface MemoryComment {
+  id: string;
+  memoryId: string;
+  spaceId: string;
+  content: string;
+  createdBy: string;
+  createdAt: string;
+  authorProfile?: UserProfile;
+}
+
 export interface Anniversary {
   id: string;
   spaceId: string;

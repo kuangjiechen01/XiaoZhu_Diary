@@ -8,6 +8,7 @@ import type {
   CoupleSpace,
   Invitation,
   Memory,
+  MemoryComment,
   NoteCard,
   SpaceMember,
   UserProfile,
@@ -48,7 +49,23 @@ function loadDatabase(): DemoDatabase {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(initialDemoDatabase));
     return structuredClone(initialDemoDatabase);
   }
-  return JSON.parse(raw) as DemoDatabase;
+  const parsed = JSON.parse(raw) as Partial<DemoDatabase>;
+  return {
+    ...structuredClone(initialDemoDatabase),
+    ...parsed,
+    users: parsed.users ?? structuredClone(initialDemoDatabase.users),
+    profiles: parsed.profiles ?? structuredClone(initialDemoDatabase.profiles),
+    spaces: parsed.spaces ?? structuredClone(initialDemoDatabase.spaces),
+    members: parsed.members ?? structuredClone(initialDemoDatabase.members),
+    invitations: parsed.invitations ?? structuredClone(initialDemoDatabase.invitations),
+    memories: parsed.memories ?? structuredClone(initialDemoDatabase.memories),
+    memoryComments:
+      parsed.memoryComments ?? structuredClone(initialDemoDatabase.memoryComments),
+    anniversaries: parsed.anniversaries ?? structuredClone(initialDemoDatabase.anniversaries),
+    notes: parsed.notes ?? structuredClone(initialDemoDatabase.notes),
+    wishes: parsed.wishes ?? structuredClone(initialDemoDatabase.wishes),
+    activities: parsed.activities ?? structuredClone(initialDemoDatabase.activities)
+  } satisfies DemoDatabase;
 }
 
 function saveDatabase(next: DemoDatabase) {
@@ -79,6 +96,20 @@ function getVisibleMemories(db: DemoDatabase, userId: string, spaceId: string) {
     )
     .map((memory) => withProfiles(db, memory))
     .sort((a, b) => `${b.date}${b.time ?? ""}`.localeCompare(`${a.date}${a.time ?? ""}`));
+}
+
+function getVisibleMemoryComments(db: DemoDatabase, userId: string, memoryId: string) {
+  const memory = db.memories.find((item) => item.id === memoryId);
+  if (!memory) return [];
+  if (memory.visibility === "private" && memory.createdBy !== userId) return [];
+
+  return db.memoryComments
+    .filter((comment) => comment.memoryId === memoryId)
+    .map((comment) => ({
+      ...comment,
+      authorProfile: db.profiles.find((profile) => profile.id === comment.createdBy)
+    }))
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
 function getVisibleNotes(db: DemoDatabase, userId: string, spaceId: string) {
@@ -533,7 +564,8 @@ export function createDemoRepository(): Repository {
       const existing = db.memories.find((item) => item.id === memoryId);
       db = {
         ...db,
-        memories: db.memories.filter((item) => item.id !== memoryId)
+        memories: db.memories.filter((item) => item.id !== memoryId),
+        memoryComments: db.memoryComments.filter((item) => item.memoryId !== memoryId)
       };
       if (existing) {
         db = appendActivity(db, {
@@ -546,6 +578,50 @@ export function createDemoRepository(): Repository {
           description: existing.title
         });
       }
+      saveDatabase(db);
+    },
+    async listMemoryComments(memoryId, userId) {
+      const db = loadDatabase();
+      return getVisibleMemoryComments(db, userId, memoryId);
+    },
+    async addMemoryComment(userId, input) {
+      let db = loadDatabase();
+      const memory = db.memories.find((item) => item.id === input.memoryId);
+      if (!memory) throw new Error("未找到这条回忆");
+      if (memory.visibility === "private" && memory.createdBy !== userId) {
+        throw new Error("你没有权限评论这条回忆");
+      }
+
+      const comment: MemoryComment = {
+        id: generateId("comment"),
+        memoryId: input.memoryId,
+        spaceId: input.spaceId,
+        content: input.content.trim(),
+        createdBy: userId,
+        createdAt: new Date().toISOString()
+      };
+
+      db = {
+        ...db,
+        memoryComments: [...db.memoryComments, comment]
+      };
+      saveDatabase(db);
+      return {
+        ...comment,
+        authorProfile: db.profiles.find((profile) => profile.id === userId)
+      };
+    },
+    async deleteMemoryComment(commentId) {
+      let db = loadDatabase();
+      const existing = db.memoryComments.find((item) => item.id === commentId);
+      if (!existing) return;
+      if (existing.createdBy !== db.sessionUserId) {
+        throw new Error("只能删除自己发表的评论");
+      }
+      db = {
+        ...db,
+        memoryComments: db.memoryComments.filter((item) => item.id !== commentId)
+      };
       saveDatabase(db);
     },
     async listAnniversaries(spaceId, userId) {
@@ -747,6 +823,9 @@ export function createDemoRepository(): Repository {
         space: db.spaces.find((space) => space.id === spaceId),
         members: await this.getSpaceMembers(spaceId),
         memories: visibleMemories,
+        memoryComments: db.memoryComments.filter((comment) =>
+          visibleMemories.some((memory) => memory.id === comment.memoryId)
+        ),
         anniversaries: await this.listAnniversaries(spaceId, userId),
         notes: await this.listNotes(spaceId, userId),
         wishes: await this.listWishlist(spaceId, userId),

@@ -37,6 +37,16 @@ export function RealtimeListener({ spaceId }: { spaceId?: string | null }) {
         {
           event: "*",
           schema: "public",
+          table: "memory_comments",
+          filter: `space_id=eq.${spaceId}`
+        },
+        () => queryClient.invalidateQueries()
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
           table: "memories",
           filter: `space_id=eq.${spaceId}`
         },

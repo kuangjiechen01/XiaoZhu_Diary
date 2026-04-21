@@ -6,6 +6,7 @@ import type {
   CoupleSpace,
   Invitation,
   Memory,
+  MemoryComment,
   MemoryPhoto,
   NoteCard,
   SearchFilters,
@@ -55,6 +56,12 @@ export interface SaveWishlistInput
   > {
   id?: string;
   completedAt?: string | null;
+}
+
+export interface CreateMemoryCommentInput {
+  memoryId: string;
+  spaceId: string;
+  content: string;
 }
 
 export interface CreateSpaceInput {
@@ -116,6 +123,9 @@ export interface Repository {
   getMemory: (memoryId: string, userId: string) => Promise<Memory | null>;
   saveMemory: (userId: string, input: SaveMemoryInput) => Promise<Memory>;
   deleteMemory: (memoryId: string) => Promise<void>;
+  listMemoryComments: (memoryId: string, userId: string) => Promise<MemoryComment[]>;
+  addMemoryComment: (userId: string, input: CreateMemoryCommentInput) => Promise<MemoryComment>;
+  deleteMemoryComment: (commentId: string) => Promise<void>;
   listAnniversaries: (spaceId: string, userId: string) => Promise<Anniversary[]>;
   saveAnniversary: (userId: string, input: SaveAnniversaryInput) => Promise<Anniversary>;
   deleteAnniversary: (anniversaryId: string) => Promise<void>;

@@ -17,6 +17,7 @@ export const queryKeys = {
     filters ?? {}
   ],
   memory: (memoryId?: string) => ["memory", memoryId],
+  memoryComments: (memoryId?: string) => ["memory-comments", memoryId],
   anniversaries: (spaceId?: string) => ["anniversaries", spaceId],
   notes: (spaceId?: string) => ["notes", spaceId],
   wishes: (spaceId?: string) => ["wishes", spaceId],
@@ -70,6 +71,16 @@ export function useMemory(memoryId?: string) {
     queryKey: queryKeys.memory(memoryId),
     enabled: Boolean(memoryId && user?.id),
     queryFn: () => repository.getMemory(memoryId!, user!.id)
+  });
+}
+
+export function useMemoryComments(memoryId?: string) {
+  const { user } = useAuth();
+  const repository = useRepository();
+  return useQuery({
+    queryKey: queryKeys.memoryComments(memoryId),
+    enabled: Boolean(memoryId && user?.id),
+    queryFn: () => repository.listMemoryComments(memoryId!, user!.id)
   });
 }
 

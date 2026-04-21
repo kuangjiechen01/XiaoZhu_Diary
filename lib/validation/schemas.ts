@@ -59,6 +59,10 @@ export const anniversarySchema = z.object({
   visibility: z.enum(["space", "private"])
 });
 
+export const memoryCommentSchema = z.object({
+  content: z.string().trim().min(1, "写一点当时的想法吧").max(500, "评论最多 500 个字")
+});
+
 export const noteSchema = z.object({
   content: z.string().min(1, "写一点想说的话吧").max(280, "最多 280 个字"),
   visibility: z.enum(["space", "private"]),

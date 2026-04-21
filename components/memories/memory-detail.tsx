@@ -16,6 +16,8 @@ import { formatDate, formatDateTime } from "@/lib/date";
 import type { Memory } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+import { MemoryComments } from "./memory-comments";
+
 export function MemoryDetail({ memory }: { memory: Memory }) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -149,6 +151,8 @@ export function MemoryDetail({ memory }: { memory: Memory }) {
           </div>
         </div>
       </Card>
+
+      <MemoryComments memory={memory} />
     </div>
   );
 }

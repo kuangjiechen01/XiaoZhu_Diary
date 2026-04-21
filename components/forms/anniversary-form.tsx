@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { queryKeys } from "@/lib/hooks/use-app-data";
 import { anniversarySchema } from "@/lib/validation/schemas";
 import type { Anniversary } from "@/lib/types";
 
@@ -35,7 +36,7 @@ export function AnniversaryForm({
     defaultValues: {
       title: "",
       kind: "custom",
-      date: "",
+      date: new Date().toISOString().slice(0, 10),
       repeatRule: "yearly",
       sortOrder: 0,
       reminderEnabled: true,
@@ -47,7 +48,7 @@ export function AnniversaryForm({
     form.reset({
       title: anniversary?.title ?? "",
       kind: anniversary?.kind ?? "custom",
-      date: anniversary?.date ?? "",
+      date: anniversary?.date ?? new Date().toISOString().slice(0, 10),
       repeatRule: anniversary?.repeatRule ?? "yearly",
       sortOrder: anniversary?.sortOrder ?? 0,
       reminderEnabled: anniversary?.reminderEnabled ?? true,
@@ -69,13 +70,20 @@ export function AnniversaryForm({
         visibility: values.visibility
       }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries();
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.anniversaries(profile?.primarySpaceId ?? undefined)
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.activities(profile?.primarySpaceId ?? undefined)
+        })
+      ]);
       toast.success(anniversary ? "纪念日已更新" : "纪念日已添加");
       onDone?.();
       form.reset({
         title: "",
         kind: "custom",
-        date: "",
+        date: new Date().toISOString().slice(0, 10),
         repeatRule: "yearly",
         sortOrder: 0,
         reminderEnabled: true,
@@ -89,11 +97,20 @@ export function AnniversaryForm({
 
   return (
     <Card className="space-y-4">
-      <form className="grid gap-4" onSubmit={form.handleSubmit((values) => saveMutation.mutate(values))}>
+      <form
+        className="grid gap-4"
+        onSubmit={form.handleSubmit(
+          (values) => saveMutation.mutate(values),
+          () => toast.error("请先补全纪念日信息")
+        )}
+      >
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="anniversary-title">名称</Label>
             <Input id="anniversary-title" {...form.register("title")} />
+            <p className="text-xs text-destructive">
+              {form.formState.errors.title?.message}
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="anniversary-kind">类型</Label>
@@ -104,10 +121,16 @@ export function AnniversaryForm({
               <option value="first_trip">第一次旅行</option>
               <option value="custom">自定义</option>
             </Select>
+            <p className="text-xs text-destructive">
+              {form.formState.errors.kind?.message}
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="anniversary-date">日期</Label>
             <Input id="anniversary-date" type="date" {...form.register("date")} />
+            <p className="text-xs text-destructive">
+              {form.formState.errors.date?.message}
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="anniversary-repeat">重复规则</Label>
@@ -115,10 +138,16 @@ export function AnniversaryForm({
               <option value="yearly">每年重复</option>
               <option value="once">仅一次</option>
             </Select>
+            <p className="text-xs text-destructive">
+              {form.formState.errors.repeatRule?.message}
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="anniversary-sort">排序</Label>
-            <Input id="anniversary-sort" type="number" {...form.register("sortOrder")} />
+            <Input id="anniversary-sort" type="number" min={0} max={99} {...form.register("sortOrder")} />
+            <p className="text-xs text-destructive">
+              {form.formState.errors.sortOrder?.message}
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="anniversary-visibility">可见性</Label>
@@ -126,6 +155,9 @@ export function AnniversaryForm({
               <option value="space">双方可见</option>
               <option value="private">仅自己可见</option>
             </Select>
+            <p className="text-xs text-destructive">
+              {form.formState.errors.visibility?.message}
+            </p>
           </div>
         </div>
         <label className="flex items-center gap-3 rounded-2xl border border-input bg-card px-4 py-3 text-sm">

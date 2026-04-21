@@ -5,6 +5,7 @@ import {
   mapAnniversaryRow,
   mapInvitationRow,
   mapMemberRow,
+  mapMemoryCommentRow,
   mapMemoryRow,
   mapNoteRow,
   mapProfileRow,
@@ -20,6 +21,7 @@ import type {
   CoupleSpace,
   Invitation,
   Memory,
+  MemoryComment,
   NoteCard,
   SpaceMember,
   UserProfile,
@@ -397,6 +399,37 @@ export function createSupabaseRepository(url: string, anonKey: string): Reposito
       const { error } = await supabase.from("memories").delete().eq("id", memoryId);
       if (error) throw new Error(error.message);
     },
+    async listMemoryComments(memoryId, userId) {
+      const memory = await this.getMemory(memoryId, userId);
+      if (!memory) return [];
+
+      const { data, error } = await supabase
+        .from("memory_comments")
+        .select("*, author_profile:profiles!memory_comments_created_by_fkey(*)")
+        .eq("memory_id", memoryId)
+        .order("created_at", { ascending: true });
+      return ensure(data, error, "读取评论失败").map(mapMemoryCommentRow) as MemoryComment[];
+    },
+    async addMemoryComment(userId, input) {
+      const { data, error } = await supabase
+        .from("memory_comments")
+        .insert({
+          memory_id: input.memoryId,
+          space_id: input.spaceId,
+          content: input.content.trim(),
+          created_by: userId
+        })
+        .select("*, author_profile:profiles!memory_comments_created_by_fkey(*)")
+        .single();
+      return mapMemoryCommentRow(ensure(data, error, "发表评论失败"));
+    },
+    async deleteMemoryComment(commentId) {
+      const { error } = await supabase
+        .from("memory_comments")
+        .delete()
+        .eq("id", commentId);
+      if (error) throw new Error(error.message);
+    },
     async listAnniversaries(spaceId, userId) {
       const { data, error } = await supabase
         .from("anniversaries")
@@ -560,10 +593,14 @@ export function createSupabaseRepository(url: string, anonKey: string): Reposito
       });
     },
     async exportSpaceData(spaceId, userId) {
+      const memories = await this.listMemories(spaceId, userId);
       return {
         space: await this.getCurrentSpace(spaceId),
         members: await this.getSpaceMembers(spaceId),
-        memories: await this.listMemories(spaceId, userId),
+        memories,
+        memoryComments: (
+          await Promise.all(memories.map((memory) => this.listMemoryComments(memory.id, userId)))
+        ).flat(),
         anniversaries: await this.listAnniversaries(spaceId, userId),
         notes: await this.listNotes(spaceId, userId),
         wishes: await this.listWishlist(spaceId, userId),
