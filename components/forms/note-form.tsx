@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { queryKeys } from "@/lib/hooks/use-app-data";
 import { noteSchema } from "@/lib/validation/schemas";
 import type { NoteCard } from "@/lib/types";
 
@@ -54,13 +55,20 @@ export function NoteForm({
       repository.saveNote(user!.id, {
         id: note?.id,
         spaceId: profile!.primarySpaceId!,
-        content: values.content,
+        content: values.content.trim(),
         visibility: values.visibility,
         isPinned: values.isPinned,
         hideFromHomepage: values.hideFromHomepage
       }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries();
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.notes(profile?.primarySpaceId ?? undefined)
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.activities(profile?.primarySpaceId ?? undefined)
+        })
+      ]);
       toast.success(note ? "留言已更新" : "留言已保存");
       onDone?.();
       form.reset({
@@ -77,10 +85,26 @@ export function NoteForm({
 
   return (
     <Card className="space-y-4">
-      <form className="space-y-4" onSubmit={form.handleSubmit((values) => saveMutation.mutate(values))}>
+      <form
+        className="space-y-4"
+        onSubmit={form.handleSubmit(
+          (values) => saveMutation.mutate(values),
+          (errors) => {
+            const firstMessage = Object.values(errors)[0]?.message;
+            toast.error(typeof firstMessage === "string" ? firstMessage : "请先检查留言内容");
+          }
+        )}
+      >
         <div className="space-y-2">
           <Label htmlFor="note-content">想说的话</Label>
-          <Textarea id="note-content" rows={4} {...form.register("content")} />
+          <Textarea
+            id="note-content"
+            rows={4}
+            placeholder="写一句今天想留给对方的话，或者一个小提醒。"
+            {...form.register("content")}
+          />
+          <p className="text-xs text-muted-foreground">当前适合写短留言，最多 280 个字。</p>
+          <p className="text-xs text-destructive">{form.formState.errors.content?.message}</p>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
@@ -89,6 +113,7 @@ export function NoteForm({
               <option value="space">双方可见</option>
               <option value="private">仅自己可见</option>
             </Select>
+            <p className="text-xs text-destructive">{form.formState.errors.visibility?.message}</p>
           </div>
           <div className="grid gap-2">
             <label className="flex items-center gap-3 rounded-2xl border border-input bg-card px-4 py-3 text-sm">

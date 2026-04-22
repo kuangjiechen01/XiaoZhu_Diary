@@ -64,7 +64,7 @@ export const memoryCommentSchema = z.object({
 });
 
 export const noteSchema = z.object({
-  content: z.string().min(1, "写一点想说的话吧").max(280, "最多 280 个字"),
+  content: z.string().trim().min(1, "写一点想说的话吧").max(280, "最多 280 个字"),
   visibility: z.enum(["space", "private"]),
   isPinned: z.boolean(),
   hideFromHomepage: z.boolean()
